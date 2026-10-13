@@ -33,45 +33,50 @@
         .hide { display: none !important; }
         .tab-content { display: none; animation: fadeUp 0.3s ease; }
         .tab-content.active { display: block; }
+        .modal { background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
         
         @keyframes fadeUp {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
         
-        /* Ocultar barra de rolagem mas manter funcionalidade */
+        /* Toast notification */
+        #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; flex-direction: column; gap: 10px; pointer-events: none;}
+        .toast { background: #1c1c1e; border: 1px solid #00e5ff; padding: 12px 20px; border-radius: 50px; box-shadow: 0 4px 20px rgba(0,229,255,0.2); animation: slideDown 0.3s ease-out forwards; color: white; font-weight: bold; font-size: 12px; text-align: center;}
+        @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="h-screen flex flex-col font-sans overflow-hidden">
 
+    <div id="toast-container"></div>
+
     <!-- TELA DE LOGIN -->
-    <div id="loginScreen" class="fixed inset-0 bg-appBg z-50 flex flex-col items-center justify-center p-6 active">
+    <div id="loginScreen" class="fixed inset-0 bg-appBg z-50 flex flex-col items-center justify-center p-6 hide">
         <div class="w-full max-w-sm">
             <div class="text-center mb-10">
                 <i class="fa-solid fa-bolt text-5xl text-neonBlue mb-4 drop-shadow-[0_0_15px_rgba(0,229,255,0.8)]"></i>
                 <h1 class="text-3xl font-bold tracking-tight">Recompense</h1>
                 <p class="text-textMuted mt-2">O seu esforço vale níveis.</p>
             </div>
-            
             <div class="bg-cardBg p-6 rounded-2xl border border-gray-800">
                 <input type="text" id="loginName" placeholder="Seu Nome de Caçador" class="w-full bg-black border border-gray-700 rounded-xl p-4 mb-4 text-white focus:border-neonBlue outline-none transition">
-                <input type="password" placeholder="Senha" class="w-full bg-black border border-gray-700 rounded-xl p-4 mb-6 text-white focus:border-neonBlue outline-none transition">
                 <button onclick="doLogin()" class="w-full bg-neonBlue text-black font-bold text-lg rounded-xl py-4 glow-btn hover:bg-cyan-400 transition">Entrar na Guilda</button>
             </div>
         </div>
     </div>
 
     <!-- APP PRINCIPAL -->
-    <div id="mainApp" class="hide h-full flex flex-col">
+    <div id="mainApp" class="h-full flex flex-col">
         
-        <!-- HEADER COMPACTO GYMRATS STYLE -->
+        <!-- HEADER -->
         <header class="bg-appBg pt-safe px-4 pb-2 sticky top-0 z-10 border-b border-gray-800 flex justify-between items-center">
-            <div class="flex items-center gap-3 mt-4">
-                <div class="w-10 h-10 rounded-full bg-gray-800 bg-[url('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix')] bg-cover border border-neonBlue"></div>
+            <div class="flex items-center gap-3 mt-4 cursor-pointer hover:opacity-80 transition" onclick="editProfile()">
+                <div id="profileAvatar" class="w-10 h-10 rounded-full bg-gray-800 bg-cover bg-center border border-neonBlue" style="background-image: url('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix')"></div>
                 <div>
                     <h1 class="font-bold text-sm leading-tight" id="profileName">Caçador</h1>
-                    <p class="text-[10px] text-neonBlue font-semibold uppercase tracking-wider" id="profileRank">Nvl 1 • Aspirante</p>
+                    <p class="text-[10px] font-semibold uppercase tracking-wider text-neonBlue" id="profileRank">Nvl 1 • Aspirante</p>
                 </div>
             </div>
             <div class="flex gap-3 mt-4">
@@ -92,13 +97,17 @@
             <!-- ABA 1: MEU DIA -->
             <section id="tab-hoje" class="tab-content active">
                 
-                <!-- Pomodoro / Status -->
+                <!-- Pomodoro -->
                 <div class="bg-cardBg rounded-3xl p-6 mb-6 border border-gray-800 relative overflow-hidden">
                     <div class="absolute -right-10 -top-10 w-32 h-32 bg-neonBlue opacity-10 rounded-full blur-3xl"></div>
-                    <h2 class="text-textMuted text-xs uppercase font-bold tracking-widest mb-2">Foco Atual</h2>
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-textMuted text-xs uppercase font-bold tracking-widest">Foco Atual (Min)</h2>
+                        <button onclick="editTimerTime()" class="text-textMuted hover:text-neonBlue text-xs"><i class="fa-solid fa-pen"></i> Editar Tempo</button>
+                    </div>
                     <div class="text-5xl font-extrabold mb-4 font-mono tracking-tighter" id="timerDisplay">50:00</div>
                     <div class="flex gap-3">
-                        <button onclick="startTimer()" class="flex-1 bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition">Iniciar Foco</button>
+                        <button id="btnTimer" onclick="toggleTimer()" class="flex-1 bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition">Iniciar Foco</button>
+                        <button onclick="resetTimer()" class="w-14 bg-gray-800 text-white font-bold py-3 rounded-xl hover:bg-gray-700 transition"><i class="fa-solid fa-rotate-right"></i></button>
                     </div>
                 </div>
 
@@ -106,41 +115,32 @@
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="font-bold text-lg">Missões de Hoje</h3>
-                        <button class="w-8 h-8 rounded-full bg-cardBg text-neonBlue flex items-center justify-center"><i class="fa-solid fa-plus"></i></button>
+                        <button onclick="openModal('taskModal')" class="w-8 h-8 rounded-full bg-cardBg border border-gray-700 text-neonBlue flex items-center justify-center hover:bg-gray-800"><i class="fa-solid fa-plus"></i></button>
                     </div>
-                    <div class="space-y-3">
-                        <!-- Exemplo de Tarefa -->
-                        <div class="bg-cardBg p-4 rounded-2xl flex items-center gap-4 border border-gray-800">
-                            <div class="w-6 h-6 rounded-full border-2 border-gray-500"></div>
-                            <div class="flex-1">
-                                <h4 class="font-semibold text-sm">Direito Constitucional</h4>
-                                <p class="text-xs text-textMuted">Média • 30 XP</p>
-                            </div>
-                        </div>
-                        <div class="bg-cardBg p-4 rounded-2xl flex items-center gap-4 border border-neonBlue border-opacity-30">
-                            <div class="w-6 h-6 rounded-full bg-neonBlue flex items-center justify-center"><i class="fa-solid fa-check text-black text-xs"></i></div>
-                            <div class="flex-1 opacity-50">
-                                <h4 class="font-semibold text-sm line-through">Revisão de Véspera</h4>
-                                <p class="text-xs text-textMuted">Fácil • 15 XP</p>
-                            </div>
-                        </div>
+                    <div id="taskList" class="space-y-3">
+                        <!-- Tarefas injetadas via JS -->
                     </div>
                 </div>
 
                 <!-- Buffs Rapidos -->
                 <div>
-                    <h3 class="font-bold text-lg mb-4">Buffs Diários</h3>
+                    <h3 class="font-bold text-lg mb-4">Buffs Diários (Moedas)</h3>
                     <div class="flex gap-3 overflow-x-auto pb-2">
-                        <div class="bg-cardBg min-w-[120px] p-4 rounded-2xl border border-gray-800 text-center shrink-0">
+                        <button onclick="addBuff('Treino Pesado', 40)" class="bg-cardBg min-w-[120px] p-4 rounded-2xl border border-gray-800 text-center shrink-0 hover:border-neonBlue transition">
                             <div class="w-10 h-10 mx-auto rounded-full bg-gray-800 flex items-center justify-center mb-2"><i class="fa-solid fa-dumbbell text-neonBlue"></i></div>
                             <p class="text-xs font-bold">Treino</p>
                             <p class="text-xs text-yellow-400 mt-1">+40 <i class="fa-solid fa-coins"></i></p>
-                        </div>
-                        <div class="bg-cardBg min-w-[120px] p-4 rounded-2xl border border-gray-800 text-center shrink-0">
+                        </button>
+                        <button onclick="addBuff('Leitura Livre', 20)" class="bg-cardBg min-w-[120px] p-4 rounded-2xl border border-gray-800 text-center shrink-0 hover:border-purple-400 transition">
                             <div class="w-10 h-10 mx-auto rounded-full bg-gray-800 flex items-center justify-center mb-2"><i class="fa-solid fa-book text-purple-400"></i></div>
                             <p class="text-xs font-bold">Leitura Livre</p>
                             <p class="text-xs text-yellow-400 mt-1">+20 <i class="fa-solid fa-coins"></i></p>
-                        </div>
+                        </button>
+                        <button onclick="addBuff('Água', 10)" class="bg-cardBg min-w-[120px] p-4 rounded-2xl border border-gray-800 text-center shrink-0 hover:border-blue-400 transition">
+                            <div class="w-10 h-10 mx-auto rounded-full bg-gray-800 flex items-center justify-center mb-2"><i class="fa-solid fa-droplet text-blue-400"></i></div>
+                            <p class="text-xs font-bold">Bater Meta Água</p>
+                            <p class="text-xs text-yellow-400 mt-1">+10 <i class="fa-solid fa-coins"></i></p>
+                        </button>
                     </div>
                 </div>
             </section>
@@ -148,141 +148,83 @@
             <!-- ABA 2: SEMANA -->
             <section id="tab-semana" class="tab-content">
                 <h2 class="text-2xl font-bold mb-4">Cronograma</h2>
-                <!-- Dias da Semana -->
-                <div class="flex justify-between mb-6">
-                    <div class="flex flex-col items-center opacity-50"><span class="text-xs mb-1">S</span><div class="w-8 h-8 rounded-full bg-cardBg flex items-center justify-center text-sm font-bold">12</div></div>
-                    <div class="flex flex-col items-center opacity-50"><span class="text-xs mb-1">T</span><div class="w-8 h-8 rounded-full bg-cardBg flex items-center justify-center text-sm font-bold">13</div></div>
-                    <div class="flex flex-col items-center text-neonBlue"><span class="text-xs mb-1">Q</span><div class="w-8 h-8 rounded-full bg-neonBlue text-black flex items-center justify-center text-sm font-bold">14</div></div>
-                    <div class="flex flex-col items-center opacity-50"><span class="text-xs mb-1">Q</span><div class="w-8 h-8 rounded-full bg-cardBg flex items-center justify-center text-sm font-bold">15</div></div>
-                    <div class="flex flex-col items-center opacity-50"><span class="text-xs mb-1">S</span><div class="w-8 h-8 rounded-full bg-cardBg flex items-center justify-center text-sm font-bold">16</div></div>
-                </div>
-                
-                <div class="bg-cardBg p-5 rounded-2xl border border-gray-800 text-center">
-                    <i class="fa-regular fa-calendar text-3xl text-gray-600 mb-3"></i>
-                    <p class="text-sm text-textMuted mb-4">Nenhuma missão agendada para Quarta-feira.</p>
-                    <button class="bg-gray-800 text-white font-bold py-2 px-6 rounded-full text-sm">Adicionar Missão</button>
+                <div class="bg-cardBg p-5 rounded-2xl border border-gray-800 text-center mt-10">
+                    <i class="fa-regular fa-compass text-4xl text-neonPurple mb-3"></i>
+                    <p class="text-sm text-textMuted mb-2">Visão semanal em construção.</p>
+                    <p class="text-xs text-gray-500">Por enquanto, use a aba 'Hoje' para o foco diário.</p>
                 </div>
             </section>
 
             <!-- ABA 3: RECOMPENSAS -->
             <section id="tab-recompensas" class="tab-content">
-                <h2 class="text-2xl font-bold mb-4">Cofre</h2>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold">Cofre</h2>
+                    <button onclick="openModal('rewardModal')" class="w-8 h-8 rounded-full bg-cardBg border border-gray-700 text-yellow-400 flex items-center justify-center hover:bg-gray-800"><i class="fa-solid fa-plus"></i></button>
+                </div>
                 
-                <!-- Sub-abas -->
-                <div class="flex p-1 bg-cardBg rounded-xl mb-6">
-                    <button class="flex-1 py-2 text-sm font-bold bg-gray-700 rounded-lg">Loja</button>
-                    <button class="flex-1 py-2 text-sm font-bold text-textMuted">Inventário</button>
+                <!-- Sub-abas do Cofre -->
+                <div class="flex p-1 bg-cardBg rounded-xl mb-6 border border-gray-800">
+                    <button id="btnShop" onclick="switchVaultTab('shop')" class="flex-1 py-2 text-sm font-bold bg-gray-700 rounded-lg text-white">Loja</button>
+                    <button id="btnInv" onclick="switchVaultTab('inventory')" class="flex-1 py-2 text-sm font-bold text-textMuted">Inventário</button>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <!-- Item Cofre -->
-                    <div class="bg-cardBg p-4 rounded-2xl border border-gray-800 flex flex-col items-center text-center">
-                        <div class="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center mb-3">
-                            <i class="fa-solid fa-gamepad text-neonPurple text-xl"></i>
-                        </div>
-                        <h4 class="font-bold text-sm mb-1">1h de Jogo</h4>
-                        <p class="text-yellow-400 font-bold text-sm mb-3"><i class="fa-solid fa-coins"></i> 100</p>
-                        <button class="w-full bg-gray-800 py-2 rounded-lg text-xs font-bold hover:bg-gray-700">Comprar</button>
-                    </div>
-                    
-                    <div class="bg-cardBg p-4 rounded-2xl border border-gray-800 flex flex-col items-center text-center">
-                        <div class="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center mb-3">
-                            <i class="fa-solid fa-tv text-blue-400 text-xl"></i>
-                        </div>
-                        <h4 class="font-bold text-sm mb-1">Episódio Série</h4>
-                        <p class="text-yellow-400 font-bold text-sm mb-3"><i class="fa-solid fa-coins"></i> 80</p>
-                        <button class="w-full bg-gray-800 py-2 rounded-lg text-xs font-bold hover:bg-gray-700">Comprar</button>
-                    </div>
+                <div id="storeGrid" class="grid grid-cols-2 gap-4">
+                    <!-- Loja injetada via JS -->
+                </div>
+                <div id="inventoryList" class="space-y-3 hide">
+                    <!-- Inventario injetado via JS -->
                 </div>
             </section>
 
-            <!-- ABA 4: GUILDA (FORUM ESTILO GYMRATS) -->
+            <!-- ABA 4: GUILDA -->
             <section id="tab-guilda" class="tab-content">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-bold">A Guilda</h2>
-                    <button class="bg-gray-800 px-3 py-1 rounded-full text-xs font-bold"><i class="fa-solid fa-trophy text-yellow-400 mr-1"></i> Ranking</button>
+                    <button onclick="showRanking()" class="bg-gray-800 px-3 py-1 rounded-full text-xs font-bold border border-gray-700"><i class="fa-solid fa-trophy text-yellow-400 mr-1"></i> Ranking</button>
                 </div>
 
                 <!-- Criar Post -->
                 <div class="bg-cardBg p-4 rounded-2xl mb-6 flex gap-3 border border-gray-800">
-                    <div class="w-10 h-10 rounded-full bg-[url('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix')] bg-cover shrink-0"></div>
+                    <div class="w-10 h-10 rounded-full bg-cover bg-center shrink-0 border border-gray-700 user-avatar-display" style="background-image: url('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix')"></div>
                     <div class="flex-1">
-                        <input type="text" placeholder="Mostre o seu progresso..." class="w-full bg-transparent text-sm outline-none mb-3 text-white">
+                        <textarea id="postText" placeholder="Mostre o seu progresso..." class="w-full bg-transparent text-sm outline-none mb-2 text-white resize-none" rows="2"></textarea>
+                        <input type="text" id="postImgUrl" placeholder="URL da Imagem (Opcional)" class="w-full bg-black border border-gray-800 rounded p-2 text-xs mb-3 text-white hide">
                         <div class="flex justify-between items-center">
-                            <button class="text-textMuted hover:text-white"><i class="fa-solid fa-image"></i></button>
-                            <button class="bg-neonBlue text-black font-bold px-4 py-1 rounded-full text-xs">Publicar</button>
+                            <button onclick="togglePostImgInput()" class="text-textMuted hover:text-white text-sm"><i class="fa-solid fa-image"></i></button>
+                            <button onclick="createPost()" class="bg-neonBlue text-black font-bold px-4 py-1 rounded-full text-xs">Publicar</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Feed de Posts (Estilo Gymrats) -->
-                <div class="space-y-5">
-                    <!-- Post 1 -->
-                    <div class="bg-cardBg p-4 rounded-2xl border border-gray-800">
-                        <div class="flex items-center gap-3 mb-3">
-                            <div class="w-10 h-10 rounded-full bg-[url('https://api.dicebear.com/7.x/avataaars/svg?seed=Sung')] bg-cover"></div>
-                            <div>
-                                <h4 class="font-bold text-sm">Arthur_Concurseiro</h4>
-                                <p class="text-[10px] text-textMuted">Há 2 horas • Guardião da Jurisprudência</p>
-                            </div>
-                        </div>
-                        <p class="text-sm mb-3">Fechei 3 blocos de Constitucional e acertei 85% no simulado de hoje! Foco total na prova. 🔥📚</p>
-                        <!-- Imagem Placeholder do Post -->
-                        <div class="w-full h-48 bg-gray-800 rounded-xl mb-3 flex items-center justify-center bg-[url('https://images.unsplash.com/photo-1513258496099-48168024aec0?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80')] bg-cover bg-center"></div>
-                        
-                        <div class="flex gap-4 border-t border-gray-800 pt-3">
-                            <button class="text-textMuted flex items-center gap-2 text-sm hover:text-orange-500 transition">
-                                <i class="fa-solid fa-fire"></i> 24
-                            </button>
-                            <button class="text-textMuted flex items-center gap-2 text-sm hover:text-white transition">
-                                <i class="fa-regular fa-comment"></i> 5
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Post 2 -->
-                    <div class="bg-cardBg p-4 rounded-2xl border border-gray-800">
-                        <div class="flex items-center gap-3 mb-3">
-                            <div class="w-10 h-10 rounded-full bg-[url('https://api.dicebear.com/7.x/avataaars/svg?seed=Maria')] bg-cover"></div>
-                            <div>
-                                <h4 class="font-bold text-sm">Mari_Estudos</h4>
-                                <p class="text-[10px] text-textMuted">Há 5 horas • Artilheira de Questões</p>
-                            </div>
-                        </div>
-                        <p class="text-sm mb-3">Meta do dia batida! Destravei meu episódio de The Office com as moedas que ganhei no treino de perna de manhã 💪</p>
-                        <div class="flex gap-4 border-t border-gray-800 pt-3">
-                            <button class="text-textMuted flex items-center gap-2 text-sm hover:text-orange-500 transition">
-                                <i class="fa-solid fa-fire"></i> 12
-                            </button>
-                        </div>
-                    </div>
+                <!-- Feed -->
+                <div id="feedList" class="space-y-5">
+                    <!-- Posts Injetados via JS -->
                 </div>
             </section>
 
         </main>
 
-        <!-- MENU INFERIOR (GLASSMORPHISM) -->
+        <!-- MENU INFERIOR -->
         <nav class="glass-nav fixed bottom-0 w-full pb-safe pt-2 px-4 z-20">
             <div class="max-w-md mx-auto flex justify-between items-center pb-2">
-                <button onclick="switchTab('hoje')" class="tab-btn active text-white flex flex-col items-center gap-1 w-1/5" data-target="tab-hoje">
+                <button onclick="switchAppTab('hoje')" class="app-tab-btn active text-white flex flex-col items-center gap-1 w-1/5" data-target="tab-hoje">
                     <i class="fa-solid fa-house text-xl"></i>
                     <span class="text-[9px] font-bold mt-1">Hoje</span>
                 </button>
-                <button onclick="switchTab('semana')" class="tab-btn text-gray-500 hover:text-gray-300 flex flex-col items-center gap-1 w-1/5" data-target="tab-semana">
+                <button onclick="switchAppTab('semana')" class="app-tab-btn text-gray-500 hover:text-gray-300 flex flex-col items-center gap-1 w-1/5" data-target="tab-semana">
                     <i class="fa-solid fa-calendar-week text-xl"></i>
                     <span class="text-[9px] font-bold mt-1">Semana</span>
                 </button>
-                <!-- Botão Central Destaque -->
                 <div class="w-1/5 flex justify-center -mt-6">
-                    <button class="w-12 h-12 rounded-full bg-neonBlue text-black flex items-center justify-center glow-btn shadow-lg">
+                    <button onclick="openModal('taskModal')" class="w-12 h-12 rounded-full bg-neonBlue text-black flex items-center justify-center glow-btn shadow-lg">
                         <i class="fa-solid fa-plus text-xl"></i>
                     </button>
                 </div>
-                <button onclick="switchTab('recompensas')" class="tab-btn text-gray-500 hover:text-gray-300 flex flex-col items-center gap-1 w-1/5" data-target="tab-recompensas">
+                <button onclick="switchAppTab('recompensas')" class="app-tab-btn text-gray-500 hover:text-gray-300 flex flex-col items-center gap-1 w-1/5" data-target="tab-recompensas">
                     <i class="fa-solid fa-vault text-xl"></i>
                     <span class="text-[9px] font-bold mt-1">Cofre</span>
                 </button>
-                <button onclick="switchTab('guilda')" class="tab-btn text-gray-500 hover:text-gray-300 flex flex-col items-center gap-1 w-1/5" data-target="tab-guilda">
+                <button onclick="switchAppTab('guilda')" class="app-tab-btn text-gray-500 hover:text-gray-300 flex flex-col items-center gap-1 w-1/5" data-target="tab-guilda">
                     <i class="fa-solid fa-users text-xl"></i>
                     <span class="text-[9px] font-bold mt-1">Guilda</span>
                 </button>
@@ -290,57 +232,423 @@
         </nav>
     </div>
 
-    <script>
-        // Função simples para simular o Login
-        function doLogin() {
-            const nameInput = document.getElementById('loginName').value;
-            if(nameInput.trim() !== '') {
-                document.getElementById('profileName').innerText = nameInput;
-            }
-            document.getElementById('loginScreen').classList.add('hide');
-            document.getElementById('mainApp').classList.remove('hide');
-        }
-
-        // Navegação de Abas
-        function switchTab(tabId) {
-            // Esconder todas as abas
-            document.querySelectorAll('.tab-content').forEach(el => {
-                el.classList.remove('active');
-            });
-            // Mostrar a selecionada
-            document.getElementById(`tab-${tabId}`).classList.add('active');
-
-            // Resetar cores dos botões
-            document.querySelectorAll('.tab-btn').forEach(el => {
-                el.classList.remove('text-white');
-                el.classList.add('text-gray-500');
-            });
-            // Pintar botão ativo
-            const btn = document.querySelector(`.tab-btn[data-target="tab-${tabId}"]`);
-            if(btn) {
-                btn.classList.remove('text-gray-500');
-                btn.classList.add('text-white');
-            }
-        }
-
-        // Simulação do Timer Pomodoro
-        let timerRunning = false;
-        let timeLeft = 50 * 60;
-        let interval;
-
-        function startTimer() {
-            if(timerRunning) return;
-            timerRunning = true;
-            event.target.innerText = "Em Foco...";
-            event.target.classList.replace('bg-white', 'bg-neonBlue');
+    <!-- MODAL: NOVA MISSÃO -->
+    <div id="taskModal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 hide">
+        <div class="bg-cardBg p-6 rounded-3xl border border-gray-800 w-full max-w-sm relative">
+            <h3 class="text-xl font-bold mb-4">Nova Missão</h3>
+            <input type="text" id="taskName" placeholder="Ex: Estudar Direito Civil" class="w-full bg-black border border-gray-700 rounded-xl p-3 mb-4 text-white focus:border-neonBlue outline-none text-sm">
             
-            interval = setInterval(() => {
-                timeLeft--;
-                let m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-                let s = (timeLeft % 60).toString().padStart(2, '0');
-                document.getElementById('timerDisplay').innerText = `${m}:${s}`;
-            }, 1000);
+            <label class="block text-xs text-textMuted mb-2">Dificuldade e Retorno (XP e Moedas)</label>
+            <div class="grid grid-cols-3 gap-2 mb-6">
+                <button onclick="selectDiff(1)" id="diff1" class="diff-btn bg-gray-800 border border-gray-700 rounded-xl py-2 text-xs font-bold text-green-400">Fácil<br><span class="text-[10px] text-gray-400">+15</span></button>
+                <button onclick="selectDiff(2)" id="diff2" class="diff-btn bg-gray-800 border border-gray-700 rounded-xl py-2 text-xs font-bold text-yellow-400">Média<br><span class="text-[10px] text-gray-400">+30</span></button>
+                <button onclick="selectDiff(3)" id="diff3" class="diff-btn bg-gray-800 border border-gray-700 rounded-xl py-2 text-xs font-bold text-red-400">Difícil<br><span class="text-[10px] text-gray-400">+50</span></button>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="closeModal('taskModal')" class="flex-1 bg-gray-800 py-3 rounded-xl font-bold text-sm">Cancelar</button>
+                <button onclick="saveTask()" class="flex-1 bg-neonBlue text-black py-3 rounded-xl font-bold text-sm">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: NOVA RECOMPENSA -->
+    <div id="rewardModal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 hide">
+        <div class="bg-cardBg p-6 rounded-3xl border border-gray-800 w-full max-w-sm relative">
+            <h3 class="text-xl font-bold mb-4 text-yellow-400">Criar Recompensa</h3>
+            <input type="text" id="rewardName" placeholder="Ex: 1 Episódio de Série" class="w-full bg-black border border-gray-700 rounded-xl p-3 mb-4 text-white focus:border-yellow-400 outline-none text-sm">
+            <label class="block text-xs text-textMuted mb-2">Preço em Moedas</label>
+            <input type="number" id="rewardCost" placeholder="Ex: 100" class="w-full bg-black border border-gray-700 rounded-xl p-3 mb-6 text-white focus:border-yellow-400 outline-none text-sm">
+            
+            <div class="flex gap-3">
+                <button onclick="closeModal('rewardModal')" class="flex-1 bg-gray-800 py-3 rounded-xl font-bold text-sm">Cancelar</button>
+                <button onclick="saveReward()" class="flex-1 bg-yellow-400 text-black py-3 rounded-xl font-bold text-sm">Criar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === 1. BANCO DE DADOS LOCAL E ESTADOS ===
+        const RANKS = [
+            { id: 1, name: "Aspirante", min: 0, max: 500, color: "text-gray-400" },
+            { id: 2, name: "Leitor da Lei Seca", min: 501, max: 1500, color: "text-blue-400" },
+            { id: 3, name: "Artilheiro de Questões", min: 1501, max: 3200, color: "text-green-400" },
+            { id: 4, name: "Guerreiro dos Simulados", min: 3201, max: 6000, color: "text-yellow-400" },
+            { id: 5, name: "Estrategista da Revisão", min: 6001, max: 10500, color: "text-orange-400" },
+            { id: 6, name: "Guardião da Jurisprudência", min: 10501, max: 17000, color: "text-red-400" },
+            { id: 7, name: "Soberano da Banca", min: 17001, max: 99999, color: "text-neonPurple" }
+        ];
+
+        let state = {
+            name: "Caçador",
+            avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
+            xp: 0,
+            coins: 0,
+            streak: 0,
+            tasks: [],
+            shop: [
+                {id: 1, name: "1h de Jogo", cost: 100, icon: "fa-gamepad", color: "text-neonPurple"},
+                {id: 2, name: "Episódio Série", cost: 80, icon: "fa-tv", color: "text-blue-400"}
+            ],
+            inventory: [],
+            posts: [
+                {id: 1, author: "Arthur_Concurseiro", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sung", rank: "Guardião da Jurisprudência", text: "Fechei 3 blocos de Constitucional e acertei 85% no simulado de hoje! 🔥", img: "", likes: 24},
+                {id: 2, author: "Mari_Estudos", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maria", rank: "Artilheira de Questões", text: "Meta do dia batida! Destravei meu episódio de The Office. 💪", img: "", likes: 12}
+            ]
+        };
+
+        function loadData() {
+            const saved = localStorage.getItem('recompense_v2');
+            if(saved) state = JSON.parse(saved);
+            
+            if(state.name === "Caçador") {
+                document.getElementById('loginScreen').classList.remove('hide');
+                document.getElementById('mainApp').classList.add('hide');
+            } else {
+                document.getElementById('loginScreen').classList.add('hide');
+                updateUI();
+            }
         }
+
+        function saveData() {
+            localStorage.setItem('recompense_v2', JSON.stringify(state));
+            updateUI();
+        }
+
+        function doLogin() {
+            const n = document.getElementById('loginName').value;
+            if(n.trim() !== '') {
+                state.name = n;
+                state.avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${n}`;
+                saveData();
+                document.getElementById('loginScreen').classList.add('hide');
+                document.getElementById('mainApp').classList.remove('hide');
+            }
+        }
+
+        function editProfile() {
+            const newName = prompt("Mudar nome de Caçador:", state.name);
+            if(newName && newName.trim() !== "") {
+                state.name = newName;
+                state.avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${newName}`;
+                saveData();
+            }
+        }
+
+        // === 2. INTERFACE E PROGRESSÃO ===
+        function getRank() { return RANKS.find(r => state.xp >= r.min && state.xp <= r.max) || RANKS[0]; }
+
+        function addRewards(xpGained, coinsGained, msg) {
+            state.xp += xpGained;
+            state.coins += coinsGained;
+            showToast(`+${xpGained} XP | +${coinsGained} Moedas (${msg})`);
+            saveData();
+        }
+
+        function addBuff(name, coins) {
+            state.coins += coins;
+            showToast(`+${coins} Moedas (${name})`);
+            saveData();
+        }
+
+        function updateUI() {
+            const rank = getRank();
+            document.getElementById('profileName').innerText = state.name;
+            document.getElementById('profileRank').innerText = `Nvl ${rank.id} • ${rank.name}`;
+            document.getElementById('profileRank').className = `text-[10px] font-semibold uppercase tracking-wider ${rank.color}`;
+            document.getElementById('coinBalance').innerText = state.coins;
+            document.getElementById('streakCount').innerText = state.streak;
+            
+            // Atualizar Avatares
+            document.getElementById('profileAvatar').style.backgroundImage = `url('${state.avatar}')`;
+            document.querySelectorAll('.user-avatar-display').forEach(el => el.style.backgroundImage = `url('${state.avatar}')`);
+
+            renderTasks();
+            renderShop();
+            renderInventory();
+            renderFeed();
+        }
+
+        // === 3. MISSÕES (TAREFAS) ===
+        let tempDiff = 1;
+        function selectDiff(lvl) {
+            tempDiff = lvl;
+            document.querySelectorAll('.diff-btn').forEach(b => b.classList.replace('border-white', 'border-gray-700'));
+            document.getElementById(`diff${lvl}`).classList.replace('border-gray-700', 'border-white');
+        }
+
+        function saveTask() {
+            const name = document.getElementById('taskName').value;
+            if(!name) return alert('Digite o nome da missão');
+            let val = tempDiff === 1 ? 15 : tempDiff === 2 ? 30 : 50;
+            state.tasks.push({ id: Date.now(), name, val, done: false, diff: tempDiff });
+            document.getElementById('taskName').value = '';
+            closeModal('taskModal');
+            saveData();
+        }
+
+        function toggleTask(id) {
+            let t = state.tasks.find(x => x.id === id);
+            if(!t || t.done) return;
+            t.done = true;
+            addRewards(t.val, t.val, "Missão Concluída");
+        }
+
+        function deleteTask(id) {
+            state.tasks = state.tasks.filter(x => x.id !== id);
+            saveData();
+        }
+
+        function renderTasks() {
+            const list = document.getElementById('taskList');
+            list.innerHTML = '';
+            if(state.tasks.length === 0) list.innerHTML = '<p class="text-textMuted text-xs text-center py-4">Sua lista está limpa.</p>';
+            
+            state.tasks.forEach(t => {
+                let dColor = t.diff === 1 ? 'text-green-400' : t.diff === 2 ? 'text-yellow-400' : 'text-red-400';
+                list.innerHTML += `
+                    <div class="bg-cardBg p-4 rounded-2xl flex items-center gap-4 border ${t.done ? 'border-neonBlue border-opacity-30' : 'border-gray-800'}">
+                        <button onclick="toggleTask(${t.id})" class="w-6 h-6 rounded-full border-2 ${t.done ? 'bg-neonBlue border-neonBlue' : 'border-gray-500'} flex items-center justify-center">
+                            ${t.done ? '<i class="fa-solid fa-check text-black text-xs"></i>' : ''}
+                        </button>
+                        <div class="flex-1 ${t.done ? 'opacity-50' : ''}">
+                            <h4 class="font-semibold text-sm ${t.done ? 'line-through' : ''}">${t.name}</h4>
+                            <p class="text-[10px] ${dColor}">Recompensa: +${t.val} XP</p>
+                        </div>
+                        <button onclick="deleteTask(${t.id})" class="text-gray-600 hover:text-red-500"><i class="fa-solid fa-trash text-xs"></i></button>
+                    </div>
+                `;
+            });
+        }
+
+        // === 4. COFRE E INVENTÁRIO ===
+        function switchVaultTab(tab) {
+            if(tab === 'shop') {
+                document.getElementById('storeGrid').classList.remove('hide');
+                document.getElementById('inventoryList').classList.add('hide');
+                document.getElementById('btnShop').classList.replace('bg-transparent', 'bg-gray-700');
+                document.getElementById('btnShop').classList.add('text-white');
+                document.getElementById('btnInv').classList.replace('bg-gray-700', 'bg-transparent');
+                document.getElementById('btnInv').classList.replace('text-white', 'text-textMuted');
+            } else {
+                document.getElementById('storeGrid').classList.add('hide');
+                document.getElementById('inventoryList').classList.remove('hide');
+                document.getElementById('btnInv').classList.replace('bg-transparent', 'bg-gray-700');
+                document.getElementById('btnInv').classList.replace('text-textMuted', 'text-white');
+                document.getElementById('btnShop').classList.replace('bg-gray-700', 'bg-transparent');
+                document.getElementById('btnShop').classList.remove('text-white');
+            }
+        }
+
+        function saveReward() {
+            const name = document.getElementById('rewardName').value;
+            const cost = parseInt(document.getElementById('rewardCost').value);
+            if(!name || isNaN(cost)) return;
+            state.shop.push({ id: Date.now(), name, cost, icon: 'fa-gift', color: 'text-yellow-400' });
+            document.getElementById('rewardName').value = '';
+            document.getElementById('rewardCost').value = '';
+            closeModal('rewardModal');
+            saveData();
+        }
+
+        function buyReward(id) {
+            let itemIndex = state.shop.findIndex(x => x.id === id);
+            if(itemIndex === -1) return;
+            let item = state.shop[itemIndex];
+            
+            if(state.coins >= item.cost) {
+                state.coins -= item.cost;
+                // Move para inventário
+                state.inventory.push({...item, id: Date.now(), boughtAt: new Date().toLocaleDateString()});
+                showToast(`Comprado: ${item.name}! Foi para o Inventário.`);
+                saveData();
+            } else {
+                alert('Moedas insuficientes!');
+            }
+        }
+
+        function useInventoryItem(id) {
+            state.inventory = state.inventory.filter(x => x.id !== id);
+            showToast("Recompensa resgatada! Aproveite.");
+            saveData();
+        }
+
+        function renderShop() {
+            const grid = document.getElementById('storeGrid');
+            grid.innerHTML = '';
+            state.shop.forEach(r => {
+                let canBuy = state.coins >= r.cost;
+                grid.innerHTML += `
+                    <div class="bg-cardBg p-4 rounded-2xl border ${canBuy ? 'border-gray-700' : 'border-gray-800 opacity-60'} flex flex-col items-center text-center">
+                        <div class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center mb-2">
+                            <i class="fa-solid ${r.icon} ${r.color}"></i>
+                        </div>
+                        <h4 class="font-bold text-xs mb-1 line-clamp-1">${r.name}</h4>
+                        <p class="text-yellow-400 font-bold text-xs mb-3"><i class="fa-solid fa-coins"></i> ${r.cost}</p>
+                        <button onclick="buyReward(${r.id})" class="w-full ${canBuy ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-900'} py-2 rounded-lg text-xs font-bold text-white">Comprar</button>
+                    </div>
+                `;
+            });
+        }
+
+        function renderInventory() {
+            const list = document.getElementById('inventoryList');
+            list.innerHTML = '';
+            if(state.inventory.length === 0) list.innerHTML = '<p class="text-center text-textMuted text-xs py-10">Seu inventário está vazio.</p>';
+            state.inventory.forEach(r => {
+                list.innerHTML += `
+                    <div class="bg-cardBg p-4 rounded-2xl border border-neonPurple border-opacity-40 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center"><i class="fa-solid ${r.icon} ${r.color}"></i></div>
+                            <div>
+                                <h4 class="font-bold text-sm text-white">${r.name}</h4>
+                                <p class="text-[10px] text-textMuted">Disponível para uso</p>
+                            </div>
+                        </div>
+                        <button onclick="useInventoryItem(${r.id})" class="bg-neonPurple text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-purple-600">Usar</button>
+                    </div>
+                `;
+            });
+        }
+
+        // === 5. GUILDA E POSTS ===
+        function togglePostImgInput() { document.getElementById('postImgUrl').classList.toggle('hide'); }
+        
+        function createPost() {
+            const txt = document.getElementById('postText').value;
+            const img = document.getElementById('postImgUrl').value;
+            if(!txt.trim()) return;
+            
+            state.posts.unshift({
+                id: Date.now(),
+                author: state.name,
+                avatar: state.avatar,
+                rank: getRank().name,
+                text: txt,
+                img: img,
+                likes: 0
+            });
+            document.getElementById('postText').value = '';
+            document.getElementById('postImgUrl').value = '';
+            document.getElementById('postImgUrl').classList.add('hide');
+            saveData();
+        }
+
+        function renderFeed() {
+            const feed = document.getElementById('feedList');
+            feed.innerHTML = '';
+            state.posts.forEach(p => {
+                feed.innerHTML += `
+                    <div class="bg-cardBg p-4 rounded-2xl border border-gray-800">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-full bg-cover bg-center" style="background-image: url('${p.avatar}')"></div>
+                            <div>
+                                <h4 class="font-bold text-sm">${p.author}</h4>
+                                <p class="text-[10px] text-textMuted">${p.rank}</p>
+                            </div>
+                        </div>
+                        <p class="text-sm mb-3">${p.text}</p>
+                        ${p.img ? `<div class="w-full h-48 bg-gray-800 rounded-xl mb-3 bg-cover bg-center" style="background-image: url('${p.img}')"></div>` : ''}
+                        <div class="flex gap-4 border-t border-gray-800 pt-3">
+                            <button onclick="likePost(${p.id})" class="text-textMuted flex items-center gap-2 text-xs hover:text-orange-500 transition">
+                                <i class="fa-solid fa-fire"></i> ${p.likes}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function likePost(id) {
+            let p = state.posts.find(x => x.id === id);
+            if(p) { p.likes++; saveData(); }
+        }
+
+        function showRanking() { alert("Ranking online estará disponível na fase com servidor!"); }
+
+        // === 6. CRONÔMETRO ===
+        let timerTime = 50 * 60;
+        let originalTime = 50 * 60;
+        let timerRunning = false;
+        let timerInterval;
+
+        function updateDisplay() {
+            let m = Math.floor(timerTime / 60).toString().padStart(2, '0');
+            let s = (timerTime % 60).toString().padStart(2, '0');
+            document.getElementById('timerDisplay').innerText = `${m}:${s}`;
+        }
+
+        function editTimerTime() {
+            if(timerRunning) return alert("Pause o timer primeiro!");
+            let min = prompt("Quantos minutos de foco?", Math.floor(originalTime/60));
+            if(min && !isNaN(min) && min > 0) {
+                originalTime = min * 60;
+                timerTime = originalTime;
+                updateDisplay();
+            }
+        }
+
+        function toggleTimer() {
+            const btn = document.getElementById('btnTimer');
+            if(timerRunning) {
+                clearInterval(timerInterval);
+                timerRunning = false;
+                btn.innerText = "Retomar";
+                btn.className = "flex-1 bg-white text-black font-bold py-3 rounded-xl";
+            } else {
+                timerRunning = true;
+                btn.innerText = "Pausar";
+                btn.className = "flex-1 bg-neonBlue text-black font-bold py-3 rounded-xl";
+                timerInterval = setInterval(() => {
+                    if(timerTime > 0) {
+                        timerTime--;
+                        updateDisplay();
+                    } else {
+                        clearInterval(timerInterval);
+                        timerRunning = false;
+                        let xpGain = Math.floor(originalTime/60); // 1 XP por min
+                        addRewards(xpGain, xpGain, "Sessão Foco Concluída");
+                        resetTimer();
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            timerRunning = false;
+            timerTime = originalTime;
+            updateDisplay();
+            const btn = document.getElementById('btnTimer');
+            btn.innerText = "Iniciar Foco";
+            btn.className = "flex-1 bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition";
+        }
+
+        // === 7. UTILITÁRIOS E NAVEGAÇÃO ===
+        function openModal(id) { document.getElementById(id).classList.remove('hide'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hide'); }
+
+        function showToast(msg) {
+            const c = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = 'toast'; t.innerText = msg;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        function switchAppTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            document.querySelectorAll('.app-tab-btn').forEach(el => {
+                el.classList.remove('text-white'); el.classList.add('text-gray-500');
+            });
+            const btn = document.querySelector(`.app-tab-btn[data-target="tab-${tabId}"]`);
+            if(btn) { btn.classList.remove('text-gray-500'); btn.classList.add('text-white'); }
+        }
+
+        // Init
+        loadData();
+        updateDisplay();
     </script>
 </body>
 </html>
